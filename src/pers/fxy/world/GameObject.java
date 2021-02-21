@@ -1,8 +1,11 @@
 package pers.fxy.world;
 
+
+import pers.fxy.world.event.BaseEvent;
+import pers.fxy.world.event.TradeEvent;
 import pers.fxy.world.handler.eventhandler.*;
 import pers.fxy.world.handler.requesthandler.*;
-import pers.fxy.world.handler.requesthandler.RequestHandlerInterface.TradeRequestHandler;
+import pers.fxy.world.handler.requesthandler.IRequestHandler;
 import pers.fxy.world.request.*;
 import pers.fxy.world.request.TradeRequest.TradeType;
 
@@ -32,9 +35,10 @@ public class GameObject {
 	// for test
 	public static void main(String[] args) throws Exception {
 		
-		RequestHandlerBUS.get().registerHandler(TradeRequest.class, new TradeRequestHandler() {
+		// registering request handlers
+		RequestHandlerManager.get().register(TradeRequest.class, new IRequestHandler() {
 			@Override
-			public void handleRequest(Request request) {
+			public void handleRequest(IRequest request) {
 				TradeRequest re = (TradeRequest) request;
 				switch(re.getTradeType()) {
 				case BUY:
@@ -46,24 +50,67 @@ public class GameObject {
 				}
 			}
 			
-			@Override
 			public void onBuy(TradeRequest request) {
 				System.out.println("Buy");
 			}
 
-			@Override
 			public void onSold(TradeRequest request) {
 				System.out.println("Sold");
 			}
+			
+//			@Override
+//			public void andThen(IRequest request) {}
 		});
 		
-		EventHandlerBUS.get().registerHandler(TradeRequest.class, (event)->{
-			System.out.println("trade event");
+		RequestHandlerManager.get().register(TradeRequest.class, new IRequestHandler() {
+
+			@Override
+			public void handleRequest(IRequest request) {
+				System.out.println("and whatever it's a trade request");
+			}
+			
+			@Override
+			public void andThen(IRequest request) {}
+			
 		});
 		
-		RequestHandlerBUS.get().receive(new TradeRequest(null, null, null, TradeType.BUY));
-		Thread.sleep(2000);
-		RequestHandlerBUS.get().receive(new TradeRequest(null, null, null, TradeType.SOLD));
+		// registering event handlers
+		EventHandlerManager.get().register(TradeEvent.class, new IEventHandler() {
+
+			@Override
+			public Priority getPriority() {
+				return Priority.HIGHEST;
+			}
+
+			@Override
+			public void handle(BaseEvent event) {
+				System.out.println("trade event handler1");
+			}
+			
+		});
+		
+		EventHandlerManager.get().register(TradeEvent.class, new IEventHandler() {
+
+			@Override
+			public Priority getPriority() {
+				return Priority.HIGHEST;
+			}
+
+			@Override
+			public void handle(BaseEvent event) {
+				System.out.println("trade event handler2");
+			}
+			
+		});
+		
+		// sending messages
+		new Thread(() -> { RequestBus.get().receive(new TradeRequest(null, null, null, null, TradeType.BUY)); }).start();
+		
+		new Thread(() -> { RequestBus.get().receive(new TradeRequest(null, null, null, null, TradeType.SOLD)); }).start();
+		
+		new Thread(() -> { RequestBus.get().receive(new TradeRequest(null, null, null, null, TradeType.BUY)); }).start();
+		
+		new Thread(() -> { RequestBus.get().receive(new TradeRequest(null, null, null, null, TradeType.SOLD)); }).start();
 		
 	}
 	
